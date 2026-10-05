@@ -474,3 +474,20 @@ func TestParseBunPackageIdentifier(t *testing.T) {
 		})
 	}
 }
+
+func TestFindDevOnlyBunPkgs_DuplicateNames(t *testing.T) {
+	// "b" appears at two versions; the edges from either entry must count regardless of slice order
+	a := bunPackage{Name: "a", Version: "1.0.0", Metadata: bunPackageMetadata{Dependencies: map[string]string{"b": "^1.0.0"}}}
+	b1 := bunPackage{Name: "b", Version: "1.0.0", Metadata: bunPackageMetadata{Dependencies: map[string]string{"x": "^1.0.0"}}}
+	b2 := bunPackage{Name: "b", Version: "2.0.0"}
+	d := bunPackage{Name: "d", Version: "1.0.0", Metadata: bunPackageMetadata{Dependencies: map[string]string{"x": "^1.0.0"}}}
+	x := bunPackage{Name: "x", Version: "1.0.0"}
+
+	prodDeps := map[string]string{"a": "^1.0.0"}
+	devDeps := map[string]bool{"d": true}
+
+	for _, pkgs := range [][]bunPackage{{a, b1, b2, d, x}, {a, b2, b1, d, x}} {
+		got := findDevOnlyBunPkgs(pkgs, prodDeps, devDeps)
+		assert.Equal(t, map[string]bool{"d": true}, got)
+	}
+}

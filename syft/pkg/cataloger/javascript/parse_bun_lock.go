@@ -238,7 +238,9 @@ func parseBunPackageIdentifier(identifier string) (name, version string, ok bool
 }
 
 func findDevOnlyBunPkgs(bunPkgs []bunPackage, prodDeps map[string]string, devDeps map[string]bool) map[string]bool {
-	// Build a simplified dependency graph
+	// Build a simplified dependency graph keyed by name. A name can appear more than once (e.g. a nested
+	// copy at a different version), so edges are merged rather than overwritten: this keeps the result
+	// independent of map iteration order and never treats a production dependency as dev-only.
 	depGraph := make(map[string][]string)
 	for _, p := range bunPkgs {
 		var deps []string
@@ -248,7 +250,7 @@ func findDevOnlyBunPkgs(bunPkgs []bunPackage, prodDeps map[string]string, devDep
 		for depName := range p.Metadata.OptionalDependencies {
 			deps = append(deps, depName)
 		}
-		depGraph[p.Name] = deps
+		depGraph[p.Name] = append(depGraph[p.Name], deps...)
 	}
 
 	// Find all packages reachable from production dependencies
